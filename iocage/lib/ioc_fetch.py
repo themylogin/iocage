@@ -88,6 +88,10 @@ class IOCFetch(object):
         self.verify = verify
         self.hardened = hardened
         self.files = files
+<<<<<<< HEAD:iocage/lib/ioc_fetch.py
+=======
+        self.files_left = list(files)
+>>>>>>> af9e342... Cleanup some fetch code, improve error message:iocage_lib/ioc_fetch.py
         self.update = update
         self.eol = eol
         self.exit_on_error = exit_on_error
@@ -529,11 +533,42 @@ class IOCFetch(object):
             _callback=self.callback,
             silent=self.silent)
         self.fetch_download(self.files)
+<<<<<<< HEAD:iocage/lib/ioc_fetch.py
         missing = self.__fetch_check__(self.files)
 
         if missing:
             self.fetch_download(missing, missing=True)
             self.__fetch_check__(missing, _missing=True)
+=======
+        missing_files = self.__fetch_check__(self.files)
+        missing_attempt = 0
+
+        while True:
+            if not self.files_left:
+                break
+
+            if missing_attempt == 4:
+                iocage_lib.ioc_common.logit(
+                    {
+                        'level': 'EXCEPTION',
+                        'message': 'Max retries exceeded, one or more files'
+                                   f' ({", ".join(missing_files)})'
+                                   ' failed checksum verification!'
+                    },
+                    _callback=self.callback,
+                    silent=self.silent)
+
+            if not missing_files:
+                missing_files = self.files_left
+
+            self.fetch_download(missing_files, missing=bool(missing_files))
+            missing_files = self.__fetch_check__(
+                missing_files, _missing=bool(missing_files)
+            )
+
+            if missing_files:
+                missing_attempt += 1
+>>>>>>> af9e342... Cleanup some fetch code, improve error message:iocage_lib/ioc_fetch.py
 
         if not self.hardened and self.update:
             self.fetch_update()
@@ -603,7 +638,28 @@ class IOCFetch(object):
                         col = line.split("\t")
                         hashes[col[0]] = col[1]
             except FileNotFoundError:
+<<<<<<< HEAD:iocage/lib/ioc_fetch.py
                 missing.append("MANIFEST")
+=======
+                if 'MANIFEST' not in self.files:
+                    m_files = ' '.join([f'-F {x}' for x in self.files])
+                    m = f'iocage fetch -r {self.release} -s {self.server}' \
+                        f' -F MANIFEST {m_files}'
+                    iocage_lib.ioc_common.logit(
+                        {
+                            'level': 'EXCEPTION',
+                            'message': 'MANIFEST missing, refusing to continue'
+                                       f'!\nEXAMPLE COMMAND: {m}'
+                        },
+                        _callback=self.callback,
+                        silent=self.silent)
+
+                self.fetch_download(['MANIFEST'], missing=True)
+                with open("MANIFEST", "r") as _manifest:
+                    for line in _manifest:
+                        col = line.split("\t")
+                        hashes[col[0]] = col[1]
+>>>>>>> af9e342... Cleanup some fetch code, improve error message:iocage_lib/ioc_fetch.py
 
             for f in self.files:
                 if f == "MANIFEST":
